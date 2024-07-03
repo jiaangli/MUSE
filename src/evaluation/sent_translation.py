@@ -5,17 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-import os
 import io
+import os
 from logging import getLogger
+
 import numpy as np
 import torch
 
-from src.utils import bow_idf, get_nn_avg_dist
-
+from ..utils import bow_idf, get_nn_avg_dist
 
 EUROPARL_DIR = 'data/crosslingual/europarl'
-
 
 logger = getLogger()
 

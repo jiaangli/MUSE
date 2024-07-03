@@ -5,13 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-import os
 import io
+import os
 from logging import getLogger
+
 import numpy as np
 import torch
 from scipy.stats import spearmanr
-
 
 MONOLINGUAL_EVAL_PATH = 'data/monolingual'
 SEMEVAL17_EVAL_PATH = 'data/crosslingual/wordsim'

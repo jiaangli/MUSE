@@ -6,10 +6,10 @@
 #
 
 from logging import getLogger
+
 import torch
 
 from .utils import get_nn_avg_dist
-
 
 logger = getLogger()
 

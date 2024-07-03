@@ -12,7 +12,6 @@ from .utils import load_embeddings, normalize_embeddings
 
 
 class Discriminator(nn.Module):
-
     def __init__(self, params):
         super(Discriminator, self).__init__()
 
@@ -59,7 +58,7 @@ def build_model(params, with_dis):
 
     # mapping
     mapping = nn.Linear(params.emb_dim, params.emb_dim, bias=False)
-    if getattr(params, 'map_id_init', True):
+    if getattr(params, "map_id_init", True):
         mapping.weight.data.copy_(torch.diag(torch.ones(params.emb_dim)))
 
     # discriminator
@@ -75,8 +74,12 @@ def build_model(params, with_dis):
             discriminator.cuda()
 
     # normalize embeddings
-    params.src_mean = normalize_embeddings(src_emb.weight.data, params.normalize_embeddings)
+    params.src_mean = normalize_embeddings(
+        src_emb.weight.data, params.normalize_embeddings
+    )
     if params.tgt_lang:
-        params.tgt_mean = normalize_embeddings(tgt_emb.weight.data, params.normalize_embeddings)
+        params.tgt_mean = normalize_embeddings(
+            tgt_emb.weight.data, params.normalize_embeddings
+        )
 
     return src_emb, tgt_emb, mapping, discriminator
