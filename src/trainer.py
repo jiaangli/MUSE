@@ -66,12 +66,8 @@ class Trainer(object):
         bs = self.params.batch_size
         mf = self.params.dis_most_frequent
         assert mf <= min(len(self.src_dico), len(self.tgt_dico))
-        src_ids = torch.randint(
-            0, len(self.src_dico) if mf == 0 else mf, (bs,), dtype=torch.long
-        )
-        tgt_ids = torch.randint(
-            0, len(self.tgt_dico) if mf == 0 else mf, (bs,), dtype=torch.long
-        )
+        src_ids = torch.randint(0, len(self.src_dico) if mf == 0 else mf, (bs,), dtype=torch.long)
+        tgt_ids = torch.randint(0, len(self.tgt_dico) if mf == 0 else mf, (bs,), dtype=torch.long)
 
         if self.params.cuda:
             src_ids = src_ids.cuda()
@@ -163,9 +159,7 @@ class Trainer(object):
         # use one of the provided dictionary
         elif dico_train == "default":
             filename = "%s-%s.0-5000.txt" % (self.params.src_lang, self.params.tgt_lang)
-            self.dico = load_dictionary(
-                os.path.join(DIC_EVAL_PATH, filename), word2id1, word2id2
-            )
+            self.dico = load_dictionary(os.path.join(DIC_EVAL_PATH, filename), word2id1, word2id2)
         # dictionary provided by the user
         else:
             self.dico = load_dictionary(dico_train, word2id1, word2id2)
@@ -229,8 +223,7 @@ class Trainer(object):
                     old_lr = self.map_optimizer.param_groups[0]["lr"]
                     self.map_optimizer.param_groups[0]["lr"] *= self.params.lr_shrink
                     logger.info(
-                        "Shrinking the learning rate: %.5f -> %.5f"
-                        % (old_lr, self.map_optimizer.param_groups[0]["lr"])
+                        "Shrinking the learning rate: %.5f -> %.5f" % (old_lr, self.map_optimizer.param_groups[0]["lr"])
                     )
                 self.decrease_lr = True
 
@@ -271,9 +264,12 @@ class Trainer(object):
         # load all embeddings
         logger.info("Reloading all embeddings for mapping ...")
         params.src_dico, src_emb = load_embeddings(params, source=True, full_vocab=True)
-        params.tgt_dico, tgt_emb = load_embeddings(
-            params, source=False, full_vocab=True
-        )
+        params.tgt_dico, tgt_emb = load_embeddings(params, source=False, full_vocab=True)
+        src_emb = src_emb.float()
+        tgt_emb = tgt_emb.float()
+        original_norm = tgt_emb.norm(2)
+        original_std = torch.std(tgt_emb, dim=0)
+        original_emb = tgt_emb.clone()
 
         # apply same normalization as during training
         normalize_embeddings(src_emb, params.normalize_embeddings, mean=params.src_mean)
@@ -286,9 +282,20 @@ class Trainer(object):
             with torch.no_grad():
                 x = src_emb[k : k + bs]
             # x = Variable(src_emb[k:k + bs], volatile=True)
-            src_emb[k : k + bs] = self.mapping(
-                x.cuda() if params.cuda else x
-            ).data.cpu()
+            src_emb[k : k + bs] = self.mapping(x.cuda() if params.cuda else x).data.cpu()
 
+        for t in params.normalize_embeddings.split(",")[::-1]:
+            if t == "":
+                continue
+            if t == "center":
+                src_emb.add_(params.tgt_mean.expand_as(src_emb))
+                tgt_emb.add_(params.tgt_mean.expand_as(tgt_emb))
+            elif t == "renorm_l2":
+                src_emb.mul_(original_norm)
+                tgt_emb.mul_(original_norm)
+            elif t == "mean_std":
+                src_emb.mul_(original_std).add_(params.tgt_mean.expand_as(src_emb))
+                tgt_emb.mul_(original_std).add_(params.tgt_mean.expand_as(tgt_emb))
+        assert torch.allclose(tgt_emb, original_emb, atol=1e-6)
         # write embeddings to the disk
         export_embeddings(src_emb, tgt_emb, params)

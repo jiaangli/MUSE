@@ -22,9 +22,7 @@ from torch import optim
 from .dictionary import Dictionary
 from .logger import create_logger
 
-MAIN_DUMP_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "dumped"
-)
+MAIN_DUMP_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "dumped")
 
 logger = getLogger()
 
@@ -35,11 +33,7 @@ try:
 
     FAISS_AVAILABLE = True
     if not hasattr(faiss, "StandardGpuResources"):
-        sys.stderr.write(
-            "Impossible to import Faiss-GPU. "
-            "Switching to FAISS-CPU, "
-            "this will be slower.\n\n"
-        )
+        sys.stderr.write("Impossible to import Faiss-GPU. " "Switching to FAISS-CPU, " "this will be slower.\n\n")
 
 except ImportError:
     sys.stderr.write(
@@ -67,13 +61,9 @@ def initialize_exp(params):
     #     pickle.dump(params, f)
 
     # create logger
-    logger = create_logger(
-        os.path.join(params.exp_path, "train.log"), vb=params.verbose
-    )
+    logger = create_logger(os.path.join(params.exp_path, "train.log"), vb=params.verbose)
     logger.info("============ Initialized logger ============")
-    logger.info(
-        "\n".join("%s: %s" % (k, str(v)) for k, v in sorted(dict(vars(params)).items()))
-    )
+    logger.info("\n".join("%s: %s" % (k, str(v)) for k, v in sorted(dict(vars(params)).items())))
     # logger.info('The experiment will be stored in %s' % params.exp_path)
     return logger
 
@@ -235,8 +225,7 @@ def get_optimizer(s):
     assert expected_args[:2] == ["self", "params"]
     if not all(k in expected_args[2:] for k in optim_params.keys()):
         raise Exception(
-            'Unexpected parameters: expected "%s", got "%s"'
-            % (str(expected_args[2:]), str(optim_params.keys()))
+            'Unexpected parameters: expected "%s", got "%s"' % (str(expected_args[2:]), str(optim_params.keys()))
         )
 
     return optim_fn, optim_params
@@ -308,8 +297,7 @@ def read_txt_embeddings(params, source, full_vocab):
                 if word in word2id:
                     if full_vocab:
                         logger.warning(
-                            "Word '%s' found twice in %s embedding file"
-                            % (word, "source" if source else "target")
+                            "Word '%s' found twice in %s embedding file" % (word, "source" if source else "target")
                         )
                 else:
                     if not vect.shape == (_emb_dim_file,):
@@ -321,11 +309,7 @@ def read_txt_embeddings(params, source, full_vocab):
                     assert vect.shape == (_emb_dim_file,), i
                     word2id[word] = len(word2id)
                     vectors.append(vect[None])
-            if (
-                params.max_vocab > 0
-                and len(word2id) >= params.max_vocab
-                and not full_vocab
-            ):
+            if params.max_vocab > 0 and len(word2id) >= params.max_vocab and not full_vocab:
                 break
 
     assert len(word2id) == len(vectors)
@@ -377,9 +361,7 @@ def load_pth_embeddings(params, source, full_vocab):
 
     # select a subset of word embeddings (to deal with casing)
     if not full_vocab:
-        word2id, indexes = select_subset(
-            [dico[i] for i in range(len(dico))], params.max_vocab
-        )
+        word2id, indexes = select_subset([dico[i] for i in range(len(dico))], params.max_vocab)
         embeddings = embeddings[indexes]
     else:
         word2id = {w: i for i, w in enumerate(dico)}
@@ -400,9 +382,7 @@ def load_bin_embeddings(params, source, full_vocab):
     words = model.get_labels()
     assert model.get_dimension() == params.emb_dim
     logger.info("Loaded binary model. Generating embeddings ...")
-    embeddings = torch.from_numpy(
-        np.concatenate([model.get_word_vector(w)[None] for w in words], 0)
-    )
+    embeddings = torch.from_numpy(np.concatenate([model.get_word_vector(w)[None] for w in words], 0))
     logger.info("Generated embeddings for %i words." % len(words))
     assert embeddings.size() == (len(words), params.emb_dim)
 
@@ -454,6 +434,13 @@ def normalize_embeddings(emb, types, mean=None):
             emb.sub_(mean.expand_as(emb))
         elif t == "renorm":
             emb.div_(emb.norm(2, 1, keepdim=True).expand_as(emb))
+        elif t == "renorm_l2":
+            emb.div_(emb.norm(2))
+        elif t == "mean_std":
+            _std = torch.std(emb, dim=0)
+            mean = torch.mean(emb, dim=0)
+            emb.sub_(mean)
+            emb.div_(_std)
         else:
             raise Exception('Unknown normalization type: "%s"' % t)
     return mean.cpu() if mean is not None else None
@@ -474,19 +461,13 @@ def export_embeddings(src_emb, tgt_emb, params):
         with io.open(src_path, "w", encoding="utf-8") as f:
             f.write("%i %i\n" % src_emb.size())
             for i in range(len(params.src_dico)):
-                f.write(
-                    "%s %s\n"
-                    % (params.src_dico[i], " ".join("%.5f" % x for x in src_emb[i]))
-                )
+                f.write("%s %s\n" % (params.src_dico[i], " ".join("%.5f" % x for x in src_emb[i])))
         # target embeddings
         logger.info("Writing target embeddings to %s ..." % tgt_path)
         with io.open(tgt_path, "w", encoding="utf-8") as f:
             f.write("%i %i\n" % tgt_emb.size())
             for i in range(len(params.tgt_dico)):
-                f.write(
-                    "%s %s\n"
-                    % (params.tgt_dico[i], " ".join("%.5f" % x for x in tgt_emb[i]))
-                )
+                f.write("%s %s\n" % (params.tgt_dico[i], " ".join("%.5f" % x for x in tgt_emb[i])))
 
     # PyTorch file
     if params.export == "pth":

@@ -16,7 +16,7 @@ from src.models import build_model
 from src.trainer import Trainer
 from src.utils import bool_flag, initialize_exp
 
-VALIDATION_METRIC_SUP = "precision_at_1-csls_knn_10"
+VALIDATION_METRIC_SUP = "precision_at_1-csls_knn_100"
 VALIDATION_METRIC_UNSUP = "mean_cosine-csls_knn_10-S2T-10000"
 
 
@@ -170,7 +170,7 @@ for n_iter in range(params.n_refinement + 1):
 
     # JSON log / save best model / end of epoch
     # logger.info("__log__:%s" % json.dumps(to_log))
-    # trainer.save_best(to_log, VALIDATION_METRIC)
+    trainer.save_best(to_log, VALIDATION_METRIC)
     logger.info("End of iteration %i.\n\n" % n_iter)
 
 
